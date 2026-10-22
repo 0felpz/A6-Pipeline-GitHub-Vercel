@@ -21,3 +21,28 @@ jobs:
 
       - name: Executar testes
         run: python -m unittest discover -s tests -v
+
+  deploy:
+    name: Publicar na Vercel
+    needs: validar
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar Vercel
+        run: npm install --global vercel@latest
+
+      - name: Preparar projeto
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Construir projeto
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Publicar site
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
