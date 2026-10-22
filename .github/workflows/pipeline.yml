@@ -1,0 +1,49 @@
+name: A6 - Pipeline e Deploy Vercel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validar:
+    name: Validar projeto
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Executar testes
+        run: python -m unittest discover -s tests -v
+
+  deploy:
+    name: Publicar na Vercel
+    needs: validar
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Conferir configuracao da Vercel
+        run: |
+          test -n "$VERCEL_TOKEN" || (echo 'Falta secret VERCEL_TOKEN' && exit 1)
+          test -n "$VERCEL_ORG_ID" || (echo 'Falta secret VERCEL_ORG_ID' && exit 1)
+          test -n "$VERCEL_PROJECT_ID" || (echo 'Falta secret VERCEL_PROJECT_ID' && exit 1)
+      - name: Instalar Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Obter configuracao de producao
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - name: Preparar build
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+      - name: Publicar site
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
